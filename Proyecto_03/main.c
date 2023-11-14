@@ -35,10 +35,7 @@ uint32_t i; // Para delay
 
 // Funciones
 void setup(void); // Función para el setup
-void setupUART0(void); // Función para el setup del UART0
 void setupUART1(void); // Función para el setup del UART1
-void UART0_SendString(const char *str); // Función para poder mandar cadenas de texto por UART0 (monitor serial)
-void UART0_SendInteger(int8_t num); // Función para mostar enteros por UART0
 void UART1_SendString(const char *str); // Función para poder mandar cadenas de texto por UART1
 void UART1_SendInteger(int8_t num); // Función para mostar enteros por UART1
 void delay1ms(void); // Función de delay de 1ms
@@ -46,7 +43,6 @@ void delay(uint32_t msec); // Función para delay en ms
 
 int main(void){
     setup(); // Llamar a la función del setup
-    setupUART0(); // Setup del UART0
     setupUART1(); // Setup del UART1
     while (1){
         // PARQUEO 1
@@ -101,7 +97,7 @@ int main(void){
         spot3 = spot3 << 2; // Mover bits
         spot4 = spot4 << 3; // Mover bits
         available = spot1 | spot2 | spot3 | spot4; // Realizar un OR para que cada bit represente un parqueo
-        UARTCharPutNonBlocking(UART1_BASE, available); // Enviar por UART1 al esp32
+        UARTCharPutNonBlocking(UART1_BASE, available); // Enviar por UART1 al ESP32
     }
 }
 
@@ -124,94 +120,57 @@ void setup(void){
     IntMasterEnable(); // Habilitar interrupciones globales
 }
 
-void setupUART0(void){
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);                // Habilitar módulo UART0
-    GPIOPinConfigure(GPIO_PA0_U0RX);                            // Definir pinA0 como RX
-    GPIOPinConfigure(GPIO_PA1_U0TX);                            // Definir pinA1 como TX
-    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);  // Habilitar los pines para el UART
-    UARTConfigSetExpClk(UART0_BASE, SysCtlClockGet(), 115200, (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE |UART_CONFIG_PAR_NONE)); // Setear el UART0 con 115200 de baudrate, de 8 bits, de un dato y sin paridad
-    UARTEnable(UART0_BASE); //Iniciar UART0
-}
-
 void setupUART1(void){
     SysCtlPeripheralEnable(SYSCTL_PERIPH_UART1);                // Habilitar módulo UART1
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);                // Habilitar módulo UART1
     GPIOPinConfigure(GPIO_PB0_U1RX);                            // Definir pinB0 como RX
     GPIOPinConfigure(GPIO_PB1_U1TX);                            // Definir pinB1 como TX
-    GPIOPinTypeUART(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);  // Habilitar los pines para el UART
+    GPIOPinTypeUART(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);  // Habilitar los pines para el UART1
     UARTConfigSetExpClk(UART1_BASE, SysCtlClockGet(), 115200, (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE |UART_CONFIG_PAR_NONE)); // Setear el UART1 con 115200 de baudrate, de 8 bits, de un dato y sin paridad
+    //IntEnable(INT_UART1); //Habilitar interrupciones para el UART0
+    //UARTIntEnable(UART1_BASE, UART_INT_RX | UART_INT_RT); //Habilitar interrupción para la transmisión y recepción
     UARTEnable(UART1_BASE); // Iniciar UART1
-}
-
-void UART0IntHandler(void){
-    char cReceived;
-    UARTIntClear(UART0_BASE, UART_INT_RX | UART_INT_RT); // Limpiar bandera de interrupción para recepción y transmisión
-    while(UARTCharsAvail(UART0_BASE)) // Mientras haya algo disponible en el canal ejecutar
-        {
-            cReceived = UARTCharGetNonBlocking(UART0_BASE); // Guardar el dato en una variable
-            UARTCharPutNonBlocking(UART0_BASE, cReceived); // Devuelve el dato recibido al transmisor
-        }
 }
 
 void UART1IntHandler(void){
     UARTIntClear(UART1_BASE, UART_INT_RX | UART_INT_RT); // Limpiar bandera de interrupción para recepción y transmisión
     while(UARTCharsAvail(UART1_BASE)) // Mientras haya algo disponible en el canal ejecutar
         {
-            UARTCharPutNonBlocking(UART1_BASE, available); // Devuelve el dato recibido al transmisor
+            UARTCharPutNonBlocking(UART1_BASE, available); //Devuelve el dato recibido al transmisor
         }
 }
 
-void UART0_SendString(const char *str){
-  // Enviar carácteres hasta que sea el caracter nulo '\0'
-  while (*str) {
-    // Esperar a que se envie
-    while (!UARTCharPutNonBlocking(UART0_BASE, *str))
-      ;
-
-    // Mover al siguiente caracter
-    str++;
-  }
-}
-
-void UART0_SendInteger(int8_t num){
-   // Convertir de entero a una cadena de caracteres
-  char buf[20];
-  sprintf(buf, "%ld", num);
-
-  // Enviar el carácter
-  UART0_SendString(buf);
-}
-
 void UART1_SendString(const char *str){
-    // Enviar carácteres hasta que sea el caracter nulo '\0'
+    //Enviar carácteres hasta que sea el caracter nulo '\0'
   while (*str) {
-     // Esperar a que se envie
+     //Esperar a que se envie
     while (!UARTCharPutNonBlocking(UART1_BASE, *str))
       ;
 
-    // Mover al siguiente caracter
+    //Mover al siguiente caracter
     str++;
   }
 }
 
 void UART1_SendInteger(int8_t num){
-  // Convertir de entero a una cadena de caracteres
+  //Convertir de entero a una cadena de caracteres
   char buf[20];
   sprintf(buf, "%ld", num);
 
-  // Enviar la cadena por UART1
+  //Enviar la cadena por UART1
   UART1_SendString(buf);
 }
 
 void delay(uint32_t msec){
-    for (i = 0; i < msec; i++){ // Ejecutar número de veces del argumento
-        delay1ms(); // Llamar a función de 1ms
+    for (i = 0; i < msec; i++){ //Ejecutar número de veces del argumento
+        delay1ms(); //Llamar a función de 1ms
     }
 }
 
 void delay1ms(void){
-    SysTickDisable(); // Deshabilitar el Sistick
-    SysTickPeriodSet(40000-1); // Por aproximadamente 1ms
-    SysTickEnable(); // Iniciar el set del periodo
+    SysTickDisable(); //Deshabilitar el Sistick
+    SysTickPeriodSet(40000-1); //Por aproximadamente 1ms
+    SysTickEnable(); //Iniciar el set del periodo
 
-    while((NVIC_ST_CTRL_R & NVIC_ST_CTRL_COUNT) == 0); // Mientras el bit de count sea 0 no hacer nada
+    while((NVIC_ST_CTRL_R & NVIC_ST_CTRL_COUNT) == 0); //Mientras el bit de count sea 0 no hacer nada
 }
